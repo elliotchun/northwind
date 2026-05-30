@@ -8,14 +8,14 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
+import type { ReactNode } from "react";
 
-function start() {
+// Initializes the react app with the given child (typically the page that should be rendered)
+export function start(children?: ReactNode) {
   const root = createRoot(document.getElementById("root")!);
-  root.render(<App />);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", start);
-} else {
-  start();
+  root.render(
+    <App>
+      {children}
+    </App>
+  );
 }

@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 
 const app = new Elysia()
   .use(staticPlugin({
-    assets: 'src/client/',
+    assets: 'src/client/pages/',
     bunFullstack: true,
     prefix: '/',
   }))
