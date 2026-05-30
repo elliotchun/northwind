@@ -49,6 +49,16 @@ const app = new Elysia()
       const employees = await Employee.find().lean();
       return employees;
     })
+    .post("/employees", async ({ body }) => {
+      const employee = await Employee.create({
+        name: body.name,
+      });
+      return employee.toObject();
+    }, {
+      body: t.Object({
+        name: t.String(),
+      }),
+    })
     .get("/employees/:id", async ({ params }) => {
       const employee = await Employee.findById(params.id).lean();
       if (!employee) {
