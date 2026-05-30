@@ -6,7 +6,9 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysia/static": "^1.4.11",
+    "elysia": "latest",
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "bun-types": "latest"
