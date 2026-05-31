@@ -2,13 +2,12 @@ import staticPlugin from "@elysia/static";
 import { jwt } from "@elysia/jwt";
 import { Elysia, t } from "elysia";
 import * as mongoose from "mongoose";
+import { PaddleOcrService } from "ppu-paddle-ocr";
+import { pdf } from "pdf-to-img";
 import { Employee } from "./models/employee";
 import { Receipt } from "./models/receipt";
-import { extractText } from "../scripts/process-receipt";
 
-await mongoose.connect(process.env.MONGODB_URI!, {
-  dbName: "northwind"
-});
+await mongoose.connect(process.env.MONGODB_URI!);
 
 const app = new Elysia()
   .use(
@@ -61,29 +60,53 @@ const app = new Elysia()
         text: t.Optional(t.Array(t.String())),
       }),
     })
-    .post("/vision", async ({ body, status }) => {
-      const files = body.files
+    .post("/receipts/upload", async ({ file, body, status }) => {
+      const files = file("files");
       if (!files || files.length === 0) {
-        return status(400, "No files provided")
+        return status(400, "No files provided");
       }
 
-      const results: Array<{ name: string; text: string }> = []
-      for (const f of files) {
-        try {
-          const newFilePath = "data/upload/" + f.name
-          const uploadedFile = Bun.file(newFilePath)
-          await uploadedFile.write(await f.arrayBuffer())
-
-          const text = await extractText(newFilePath)
-          results.push({ name: f.name, text })
-        } catch (err) {
-          return status(500, "An error occurred while processing the receipts.")
+      const employeeId = body.employeeId;
+      let employee = null;
+      if (employeeId) {
+        employee = await Employee.findById(employeeId);
+        if (!employee) {
+          return status(404, "Employee not found");
         }
       }
-      return { results }
+
+      const results = [];
+      for (const f of files) {
+        try {
+          const text = await extractTextFromUpload(f);
+          const textLines = text
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+          if (textLines.length === 0) {
+            results.push({ name: f.data?.name ?? "unknown", status: "skipped", reason: "no text extracted" });
+            continue;
+          }
+
+          const receipt = await Receipt.create({
+            employee: employee?._id,
+            text: textLines,
+          });
+          results.push({ name: f.data?.name ?? "unknown", status: "ok", receiptId: receipt._id.toString() });
+        } catch (err) {
+          results.push({ name: f.data?.name ?? "unknown", status: "error", reason: err instanceof Error ? err.message : String(err) });
+        }
+      }
+
+      return { processed: results };
     }, {
       body: t.Object({
-        files: t.Files()
+        employeeId: t.Optional(t.String()),
+      }),
+      form: t.Files("files", {
+        maxFiles: 50,
+        maxFileSize: "50mb",
       }),
     })
     .get("/receipts/:id", async ({ params }) => {
@@ -114,7 +137,7 @@ const app = new Elysia()
       }),
     })
     .get("/employees/:id", async ({ params }) => {
-      const employee = await Employee.find({ employee_id: params.id }).lean();
+      const employee = await Employee.findById(params.id).lean();
       if (!employee) {
         return { error: "Employee not found" };
       }
@@ -131,3 +154,40 @@ const app = new Elysia()
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
+
+async function extractTextFromUpload(file: { data: { name?: string; type?: string; path?: string } | null }): Promise<string> {
+  const name = file.data?.name ?? "";
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  let result = "";
+
+  if (ext === "pdf") {
+    const filePath = file.data?.path;
+    if (!filePath) throw new Error("No file path available");
+    const document = await pdf(filePath);
+    const service = new PaddleOcrService({
+      debugging: { debug: false, verbose: false },
+    });
+    await service.initialize();
+    for await (const image of document) {
+      const ocr = await service.recognize(image.buffer as ArrayBuffer);
+      result += ocr.text;
+    }
+    await service.destroy();
+  } else if (["jpg", "jpeg", "png"].includes(ext)) {
+    const filePath = file.data?.path;
+    if (!filePath) throw new Error("No file path available");
+    const service = new PaddleOcrService({
+      debugging: { debug: false, verbose: false },
+    });
+    await service.initialize();
+    const ocr = await service.recognize(await Bun.file(filePath).arrayBuffer());
+    result = ocr.text;
+    await service.destroy();
+  } else if (["txt", "md"].includes(ext)) {
+    result = await Bun.file(file.data?.path!).text();
+  } else {
+    throw new Error(`Unsupported file type: ${ext}`);
+  }
+
+  return result;
+}

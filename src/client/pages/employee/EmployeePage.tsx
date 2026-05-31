@@ -14,17 +14,22 @@ interface EmployeeDoc {
 export function EmployeePage() {
   const [emp, setEmp] = useState<EmployeeDoc | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const id = window.location.pathname.split("/").pop()!
+  const params = new URL(window.location.href).searchParams
+  const id = params.get("id")
 
   useEffect(() => {
-    fetch(`api/employees/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        setEmp(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    if (id) {
+      fetch(`api/employees/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          setEmp(data[0])
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    }
+    else {
+      window.location.href = "/employees"
+    }
   }, [id])
 
   return (
