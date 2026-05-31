@@ -1,4 +1,5 @@
 import staticPlugin from "@elysia/static";
+import { jwt } from "@elysia/jwt";
 import { Elysia, t } from "elysia";
 import * as mongoose from "mongoose";
 import { Employee } from "./models/employee";
@@ -7,12 +8,37 @@ import { Receipt } from "./models/receipt";
 await mongoose.connect(process.env.MONGODB_URI!);
 
 const app = new Elysia()
+  .use(
+    jwt({
+      name: 'jwt',
+      secret: process.env.JWT_SECRET!,
+    })
+  )
   .use(staticPlugin({
-    assets: 'src/client/pages/',
+    assets: './src/client/pages/',
     bunFullstack: true,
-    prefix: '/',
+    prefix: '/'
   }))
-  .group('api/', app => app
+  .post("/api/login", async ({ jwt, body, status, cookie: { auth } }) => {
+    const { username, password } = body;
+    if (username === process.env.AUTH_USERNAME && password === process.env.AUTH_PASSWORD) {
+      const value = await jwt.sign({ username })
+      auth?.set({
+        value,
+        httpOnly: true,
+        maxAge: 7 * 86400,
+      })
+      return status(200, 'Ok')
+    }
+
+    return status(401, 'Invalid credentials')
+  }, {
+    body: t.Object({
+      username: t.String(),
+      password: t.String(),
+    })
+  })
+  .group('api', app => app
     .get("/receipts", async () => {
       const receipts = await Receipt.find()
         .populate("employee")
