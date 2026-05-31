@@ -6,7 +6,9 @@ import { Employee } from "./models/employee";
 import { Receipt } from "./models/receipt";
 import { extractText } from "../scripts/process-receipt";
 
-await mongoose.connect(process.env.MONGODB_URI!);
+await mongoose.connect(process.env.MONGODB_URI!, {
+  dbName: "northwind"
+});
 
 const app = new Elysia()
   .use(
@@ -112,7 +114,7 @@ const app = new Elysia()
       }),
     })
     .get("/employees/:id", async ({ params }) => {
-      const employee = await Employee.findById(params.id).lean();
+      const employee = await Employee.find({ employee_id: params.id }).lean();
       if (!employee) {
         return { error: "Employee not found" };
       }

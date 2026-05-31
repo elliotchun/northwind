@@ -95,13 +95,13 @@ export function UploadPage() {
             loading={isUploading}
             loadingText="Processing..."
           >
-            Upload and OCR
+            Upload
           </Button>
         </form>
 
         {employees.length > 0 && (
           <VStack align="stretch" gap={2}>
-            <Text fontWeight="bold">Assign to employee (optional):</Text>
+            <Text fontWeight="bold">Assign to employee:</Text>
             <select
               value={selectedEmployeeId}
               onChange={(e) => setSelectedEmployeeId(e.target.value)}
