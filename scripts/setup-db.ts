@@ -7,7 +7,6 @@ import { convertPdfToMarkdown } from "./process-policy-doc";
 import { parseArgs } from "node:util";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-// Connect to the database
 const { values, positionals } = parseArgs({
     args: Bun.argv,
     allowPositionals: true,
@@ -23,6 +22,7 @@ const embeddings = new GoogleGenerativeAIEmbeddings({
     model: process.env.EMBEDDING_MODEL!,
 });
 
+// Connect to the database
 const client = new MongoClient(process.env.MONGODB_URI!);
 await client.connect();
 

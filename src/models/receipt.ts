@@ -1,5 +1,4 @@
 import * as mongoose from "mongoose";
-import { Employee } from "./employee";
 
 const receiptSchema = new mongoose.Schema(
   {
