@@ -104,7 +104,7 @@ const app = new Elysia()
       body: t.Object({
         employeeId: t.Optional(t.String()),
       }),
-      form: t.Files("files", {
+      form: t.Files({
         maxFiles: 50,
         maxFileSize: "50mb",
       }),

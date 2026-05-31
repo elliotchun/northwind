@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Box, Text, Button, Input, VStack, Heading, Textarea, HStack } from "@chakra-ui/react"
 import { toaster, Toaster } from "../../../components/ui/toaster"
 
