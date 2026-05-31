@@ -36,10 +36,10 @@ if (process.argv[1] === import.meta.filename) { // From command line
         process.exit(1);
     }
 
-    console.log(await extractTextFromPdf(path));
+    console.log(await extractText(path));
 }
 
-async function extractTextFromPdf(filePath: string) {
+export async function extractText(filePath: string) {
     let result = "";
 
     if (SUPPORTED_FORMATS.pdf.some(extension => filePath.endsWith(extension))) { // pdf
