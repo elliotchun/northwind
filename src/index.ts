@@ -4,6 +4,7 @@ import { Elysia, t } from "elysia";
 import * as mongoose from "mongoose";
 import { Employee } from "./models/employee";
 import { Receipt } from "./models/receipt";
+import { extractText } from "../scripts/process-receipt";
 
 await mongoose.connect(process.env.MONGODB_URI!);
 
@@ -56,6 +57,31 @@ const app = new Elysia()
       body: t.Object({
         employeeId: t.String(),
         text: t.Optional(t.Array(t.String())),
+      }),
+    })
+    .post("/vision", async ({ body, status }) => {
+      const files = body.files
+      if (!files || files.length === 0) {
+        return status(400, "No files provided")
+      }
+
+      const results: Array<{ name: string; text: string }> = []
+      for (const f of files) {
+        try {
+          const newFilePath = "data/upload/" + f.name
+          const uploadedFile = Bun.file(newFilePath)
+          await uploadedFile.write(await f.arrayBuffer())
+
+          const text = await extractText(newFilePath)
+          results.push({ name: f.name, text })
+        } catch (err) {
+          return status(500, "An error occurred while processing the receipts.")
+        }
+      }
+      return { results }
+    }, {
+      body: t.Object({
+        files: t.Files()
       }),
     })
     .get("/receipts/:id", async ({ params }) => {
